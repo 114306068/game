@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>你是哪種幹部植物</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: single centered card "pot", one screen at a time: start → questions → result */
+:root{
+  --bg:#eef1e6; --card:#fbfcf7; --fg:#22301f; --muted:#62705c;
+  --accent:#3f7d3a; --accent-soft:#dbe8d3; --line:#cfd8c6;
+  --display:"Noto Serif TC",Georgia,serif; --body:"Noto Sans TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141a13; --card:#1d251b; --fg:#e6ecdf; --muted:#9aa892;
+  --accent:#86c47c; --accent-soft:#2a3a27; --line:#34422f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a13; --card:#1d251b; --fg:#e6ecdf; --muted:#9aa892;
+  --accent:#86c47c; --accent-soft:#2a3a27; --line:#34422f; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.7;padding-inline:16px;padding-block:32px}
+.wrap{max-width:520px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px 24px;display:grid;gap:18px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.3}
+h1{font-size:2rem;font-weight:900}
+h2{font-size:1.35rem}
+p{margin:0}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.8rem;letter-spacing:.12em;color:var(--accent);font-weight:700}
+.big{font-size:4.5rem;line-height:1;text-align:center}
+button{font:inherit;cursor:pointer;border-radius:12px}
+.primary{background:var(--accent);color:var(--card);border:0;padding:14px 20px;font-weight:700}
+.opt{background:transparent;color:var(--fg);border:1.5px solid var(--line);padding:14px 16px;text-align:left;transition:border-color .15s,background .15s}
+.opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.opts{display:grid;gap:10px}
+.bar{height:6px;background:var(--accent-soft);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.row{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{background:var(--accent-soft);color:var(--fg);padding:4px 12px;border-radius:999px;font-size:.85rem}
+.dept{border-top:1px dashed var(--line);padding-top:14px}
+.scores{display:grid;gap:6px;font-size:.85rem}
+.scores div{display:grid;grid-template-columns:5.5em 1fr 1.5em;gap:8px;align-items:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- 開始頁 -->
+  <section class="card" id="start">
+    <div class="big">🌱</div>
+    <p class="eyebrow">幹部植物測驗 · 6 題</p>
+    <h1>你是社團裡的哪一種植物？</h1>
+    <p class="muted">回答 6 個小問題，找出最適合你的部門與幹部類型。憑直覺選就好，沒有標準答案。</p>
+    <button class="primary" id="go">開始測驗</button>
+  </section>
+
+  <!-- 題目頁 -->
+  <section class="card" id="quiz" hidden>
+    <div class="row"><span id="qnum"></span><span id="qleft"></span></div>
+    <div class="bar"><i id="prog"></i></div>
+    <h2 id="qtext"></h2>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <!-- 結果頁 -->
+  <section class="card" id="result" hidden>
+    <p class="eyebrow">你的幹部植物是</p>
+    <div class="big" id="rEmoji"></div>
+    <h1 id="rPlant" style="text-align:center"></h1>
+    <p id="rDesc"></p>
+    <div class="tags" id="rTags"></div>
+    <div class="dept">
+      <p class="muted" style="font-size:.85rem">最適合的部門</p>
+      <h2 id="rDept"></h2>
+    </div>
+    <div class="scores" id="rScores"></div>
+    <button class="primary" id="again">再測一次</button>
+  </section>
+</div>
+
+<script>
+const TYPES = {
+  lead:  {plant:"向日葵", emoji:"🌻", dept:"會長／副會長", tags:["方向感","凝聚力","扛責任"],
+          desc:"永遠朝著光的方向。你習慣看整體、做決定，也願意在大家迷惘時站出來，是團隊的定心丸。"},
+  event: {plant:"蒲公英", emoji:"🌼", dept:"活動部", tags:["點子王","行動派","炒熱氣氛"],
+          desc:"風一吹就把種子帶到各處。你點子多、執行快，最享受把一場活動從零變成現場的熱鬧。"},
+  pr:    {plant:"常春藤", emoji:"🌿", dept:"公關部", tags:["好溝通","人脈廣","臨場反應"],
+          desc:"能攀上任何一面牆。你擅長和不同的人建立連結，對外接洽、拉贊助都難不倒你。"},
+  art:   {plant:"繡球花", emoji:"💠", dept:"美宣部", tags:["美感","創意","重視細節"],
+          desc:"顏色會隨土壤改變。你對視覺很敏感，海報、社群貼文、場佈都能做出自己的風格。"},
+  doc:   {plant:"多肉植物", emoji:"🪴", dept:"文書／秘書", tags:["細心","有條理","穩定可靠"],
+          desc:"安靜、整齊、照顧起來很省心。你擅長記錄與整理，會議紀錄和文件在你手上永遠井井有條。"},
+  fin:   {plant:"仙人掌", emoji:"🌵", dept:"財務／總務", tags:["精打細算","耐操","務實"],
+          desc:"在乾旱裡也能好好存活。你對數字敏感、懂得分配資源，是讓團隊不會斷糧的人。"}
+};
+
+const QUESTIONS = [
+  {q:"社團要辦一場大型活動，你第一個想做的是？", a:[
+    ["先訂出目標和分工，讓大家知道往哪走","lead"],
+    ["丟出一堆好玩的企劃點子","event"],
+    ["想想可以找哪些單位合作或贊助","pr"],
+    ["先算算預算夠不夠用","fin"]]},
+  {q:"開會時，你通常是那個…", a:[
+    ["默默把重點都記下來的人","doc"],
+    ["帶節奏、最後幫大家收斂結論的人","lead"],
+    ["一直在畫草圖、想視覺的人","art"],
+    ["負責活絡氣氛、讓大家敢發言的人","event"]]},
+  {q:"朋友找你幫忙，你最常被拜託的是？", a:[
+    ["幫忙修圖、排版、挑配色","art"],
+    ["幫忙跟陌生人開口或聯絡","pr"],
+    ["幫忙整理筆記或資料","doc"],
+    ["幫忙分帳、記錄誰付了多少","fin"]]},
+  {q:"活動當天突然下大雨，你會？", a:[
+    ["立刻決定備案並分配人手","lead"],
+    ["馬上想一個室內也能玩的新玩法","event"],
+    ["清點物資，確認哪些東西需要搬移","fin"],
+    ["聯絡場地與合作單位說明狀況","pr"]]},
+  {q:"你理想中的週末是？", a:[
+    ["去看展、逛文創市集","art"],
+    ["跟一大群朋友出去玩","pr"],
+    ["在家把房間和行事曆整理好","doc"],
+    ["揪人辦一場聚會","event"]]},
+  {q:"團隊做完一件事後，你最在意的是？", a:[
+    ["有沒有超支、帳有沒有對清楚","fin"],
+    ["成果照片和宣傳好不好看","art"],
+    ["紀錄有沒有留好，下次能接手","doc"],
+    ["大家是不是都有成長、團隊更團結","lead"]]}
+];
+
+const $ = id => document.getElementById(id);
+let i = 0, score = {};
+
+function show(id){ ["start","quiz","result"].forEach(s => $(s).hidden = s !== id); }
+
+function start(){
+  i = 0; score = Object.fromEntries(Object.keys(TYPES).map(k => [k,0]));
+  show("quiz"); renderQ();
+}
+
+function renderQ(){
+  const Q = QUESTIONS[i];
+  $("qnum").textContent = `第 ${i+1} 題`;
+  $("qleft").textContent = `${i+1} / ${QUESTIONS.length}`;
+  $("prog").style.width = (i / QUESTIONS.length * 100) + "%";
+  $("qtext").textContent = Q.q;
+  $("opts").innerHTML = "";
+  Q.a.forEach(([text,type], n) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.id = `opt-${n}`; b.textContent = text;
+    b.onclick = () => { score[type]++; i++; i < QUESTIONS.length ? renderQ() : renderResult(); };
+    $("opts").appendChild(b);
+  });
+}
+
+function renderResult(){
+  const best = Object.keys(score).reduce((a,b) => score[b] > score[a] ? b : a);
+  const t = TYPES[best];
+  $("rEmoji").textContent = t.emoji;
+  $("rPlant").textContent = t.plant;
+  $("rDesc").textContent = t.desc;
+  $("rDept").textContent = t.dept;
+  $("rTags").innerHTML = t.tags.map(x => `<span class="tag">${x}</span>`).join("");
+  const max = QUESTIONS.length;
+  $("rScores").innerHTML = Object.entries(TYPES).map(([k,v]) =>
+    `<div><span>${v.emoji} ${v.plant}</span><div class="bar"><i style="width:${score[k]/max*100}%"></i></div><span>${score[k]}</span></div>`
+  ).join("");
+  show("result");
+}
+
+$("go").onclick = start;
+$("again").onclick = start;
+</script>
+</body>
+</html>
