@@ -40,8 +40,13 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .tags{display:flex;flex-wrap:wrap;gap:8px}
 .tag{background:var(--accent-soft);color:var(--fg);padding:4px 12px;border-radius:999px;font-size:.85rem}
 .dept{border-top:1px dashed var(--line);padding-top:14px}
-.scores{display:grid;gap:6px;font-size:.85rem}
-.scores div{display:grid;grid-template-columns:5.5em 1fr 1.5em;gap:8px;align-items:center}
+.detail{display:grid;gap:14px;border-top:1px dashed var(--line);padding-top:14px}
+.detail h3{font-size:.95rem;margin:0 0 4px;color:var(--accent)}
+.detail ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+.second{display:flex;gap:14px;align-items:center;background:var(--accent-soft);border-radius:14px;padding:14px 16px}
+.second .emoji{font-size:2.4rem;line-height:1}
+.second div{min-width:0}
+.second strong{font-family:var(--display);font-size:1.1rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 *{box-sizing:border-box}
 body{margin:0}
@@ -70,7 +75,7 @@ body{margin:0}
 
   <!-- 結果頁 -->
   <section class="card" id="result" hidden>
-    <p class="eyebrow">你的幹部植物是</p>
+    <p class="eyebrow">第一順位 · 你的幹部植物是</p>
     <div class="big" id="rEmoji"></div>
     <h1 id="rPlant" style="text-align:center"></h1>
     <p id="rDesc"></p>
@@ -79,7 +84,19 @@ body{margin:0}
       <p class="muted" style="font-size:.85rem">最適合的部門</p>
       <h2 id="rDept"></h2>
     </div>
-    <div class="scores" id="rScores"></div>
+    <div class="detail">
+      <div><h3>你的優勢</h3><ul id="rStrengths"></ul></div>
+      <div><h3>適合負責的工作</h3><ul id="rRoles"></ul></div>
+      <div><h3>小提醒</h3><p id="rWatch"></p></div>
+    </div>
+    <div>
+      <p class="eyebrow" style="margin-bottom:8px">第二順位</p>
+      <div class="second">
+        <span class="emoji" id="r2Emoji"></span>
+        <div><strong id="r2Plant"></strong> · <span id="r2Dept"></span>
+          <p class="muted" style="font-size:.9rem" id="r2Desc"></p></div>
+      </div>
+    </div>
     <button class="primary" id="again">再測一次</button>
   </section>
 </div>
@@ -87,17 +104,35 @@ body{margin:0}
 <script>
 const TYPES = {
   lead:  {plant:"向日葵", emoji:"🌻", dept:"會長／副會長", tags:["方向感","凝聚力","扛責任"],
-          desc:"永遠朝著光的方向。你習慣看整體、做決定，也願意在大家迷惘時站出來，是團隊的定心丸。"},
+          desc:"永遠朝著光的方向。你習慣看整體、做決定，也願意在大家迷惘時站出來，是團隊的定心丸。",
+          strengths:["能看見全局，知道每個人該往哪裡努力","遇到狀況時敢拍板、願意承擔後果","懂得鼓舞士氣，讓大家願意跟著你走"],
+          roles:["擬定學期目標與活動方向","主持幹部會議、分配工作","對外代表社團、協調各部門"],
+          watch:"向日葵一直面向太陽，有時會忘了看看身邊。記得把工作分出去，也多聽聽夥伴的想法，不必什麼都一個人扛。"},
   event: {plant:"蒲公英", emoji:"🌼", dept:"活動部", tags:["點子王","行動派","炒熱氣氛"],
-          desc:"風一吹就把種子帶到各處。你點子多、執行快，最享受把一場活動從零變成現場的熱鬧。"},
+          desc:"風一吹就把種子帶到各處。你點子多、執行快，最享受把一場活動從零變成現場的熱鬧。",
+          strengths:["點子源源不絕，總能想出新玩法","行動力強，想到就能開始動手","擅長帶動現場氣氛，讓大家玩得開心"],
+          roles:["發想活動企劃與遊戲關卡","安排活動流程與現場控場","帶領迎新、營隊等大型活動"],
+          watch:"種子飛得遠，也容易四處分散。點子多的時候，試著先挑一兩個做到完整，並留意時程和細節。"},
   pr:    {plant:"常春藤", emoji:"🌿", dept:"公關部", tags:["好溝通","人脈廣","臨場反應"],
-          desc:"能攀上任何一面牆。你擅長和不同的人建立連結，對外接洽、拉贊助都難不倒你。"},
+          desc:"能攀上任何一面牆。你擅長和不同的人建立連結，對外接洽、拉贊助都難不倒你。",
+          strengths:["和陌生人也能自在聊天，很快拉近距離","說話得體，懂得替對方著想","臨場反應快，遇到突發狀況能圓場"],
+          roles:["接洽贊助商與合作單位","和其他社團、系學會聯繫交流","活動時擔任主持或對外窗口"],
+          watch:"常春藤攀得廣，也需要扎穩根。答應別人之前，先確認社團內部做得到，免得承諾太多。"},
   art:   {plant:"繡球花", emoji:"💠", dept:"美宣部", tags:["美感","創意","重視細節"],
-          desc:"顏色會隨土壤改變。你對視覺很敏感，海報、社群貼文、場佈都能做出自己的風格。"},
+          desc:"顏色會隨土壤改變。你對視覺很敏感，海報、社群貼文、場佈都能做出自己的風格。",
+          strengths:["對配色、排版很敏銳，一眼看出哪裡不協調","能把抽象的想法變成具體的畫面","重視細節，作品完成度高"],
+          roles:["設計活動海報與社群貼文","規劃場地布置與道具","經營社團的整體視覺風格"],
+          watch:"繡球花會為了好看反覆調整顏色。追求完美之餘，也要抓好截止時間，先完成再慢慢修。"},
   doc:   {plant:"多肉植物", emoji:"🪴", dept:"文書／秘書", tags:["細心","有條理","穩定可靠"],
-          desc:"安靜、整齊、照顧起來很省心。你擅長記錄與整理，會議紀錄和文件在你手上永遠井井有條。"},
+          desc:"安靜、整齊、照顧起來很省心。你擅長記錄與整理，會議紀錄和文件在你手上永遠井井有條。",
+          strengths:["做事細心，不容易漏掉重要資訊","擅長把雜亂的資料整理得清楚易懂","穩定可靠，交給你的事一定會完成"],
+          roles:["撰寫會議紀錄與活動成果報告","管理社團文件、公文與檔案","整理行事曆、提醒大家重要時程"],
+          watch:"多肉植物很安靜，存在感容易被忽略。有想法時大膽說出來，你的觀察常常是團隊需要的。"},
   fin:   {plant:"仙人掌", emoji:"🌵", dept:"財務／總務", tags:["精打細算","耐操","務實"],
-          desc:"在乾旱裡也能好好存活。你對數字敏感、懂得分配資源，是讓團隊不會斷糧的人。"}
+          desc:"在乾旱裡也能好好存活。你對數字敏感、懂得分配資源，是讓團隊不會斷糧的人。",
+          strengths:["對數字敏感，帳目清楚不出錯","懂得分配有限的資源，花在刀口上","務實耐操，資源不足時也能想辦法撐下去"],
+          roles:["編列活動預算、管理社費","採購與管理社團物資、器材","核銷收據、做期末財務報告"],
+          watch:"仙人掌有刺，是為了保護自己。把關預算時，也試著說明原因，讓夥伴理解你不是在刁難。"}
 };
 
 const QUESTIONS = [
@@ -159,18 +194,24 @@ function renderQ(){
 }
 
 function renderResult(){
-  const best = Object.keys(score).reduce((a,b) => score[b] > score[a] ? b : a);
-  const t = TYPES[best];
+  // 依分數排序；同分時保留 TYPES 的原始順序
+  const [first, second] = Object.keys(TYPES).sort((a,b) => score[b] - score[a]);
+  const t = TYPES[first], t2 = TYPES[second];
+  const li = arr => arr.map(x => `<li>${x}</li>`).join("");
   $("rEmoji").textContent = t.emoji;
   $("rPlant").textContent = t.plant;
   $("rDesc").textContent = t.desc;
   $("rDept").textContent = t.dept;
   $("rTags").innerHTML = t.tags.map(x => `<span class="tag">${x}</span>`).join("");
-  const max = QUESTIONS.length;
-  $("rScores").innerHTML = Object.entries(TYPES).map(([k,v]) =>
-    `<div><span>${v.emoji} ${v.plant}</span><div class="bar"><i style="width:${score[k]/max*100}%"></i></div><span>${score[k]}</span></div>`
-  ).join("");
+  $("rStrengths").innerHTML = li(t.strengths);
+  $("rRoles").innerHTML = li(t.roles);
+  $("rWatch").textContent = t.watch;
+  $("r2Emoji").textContent = t2.emoji;
+  $("r2Plant").textContent = t2.plant;
+  $("r2Dept").textContent = t2.dept;
+  $("r2Desc").textContent = t2.desc;
   show("result");
+  window.scrollTo(0, 0);
 }
 
 $("go").onclick = start;
